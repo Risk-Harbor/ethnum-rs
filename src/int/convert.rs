@@ -112,54 +112,6 @@ impl AsI256 for bool {
     }
 }
 
-macro_rules! impl_as_i256_float {
-    ($($t:ty [$b:ty]),* $(,)?) => {$(
-        impl AsI256 for $t {
-            #[inline]
-            fn as_i256(self) -> I256 {
-                // The conversion follows roughly the same rules as converting
-                // `f64` to other primitive integer types:
-                // - `NaN` => `0`
-                // - `(-∞, I256::MIN]` => `I256::MIN`
-                // - `(I256::MIN, I256::MAX]` => `value as I256`
-                // - `(I256::MAX, +∞)` => `I256::MAX`
-
-                const M: $b = (<$t>::MANTISSA_DIGITS - 1) as _;
-                const MAN_MASK: $b = !(!0 << M);
-                const MAN_ONE: $b = 1 << M;
-                const EXP_MASK: $b = !0 >> <$t>::MANTISSA_DIGITS;
-                const EXP_OFFSET: $b = EXP_MASK / 2;
-                const ABS_MASK: $b = !0 >> 1;
-                const SIG_MASK: $b = !ABS_MASK;
-
-                let abs = <$t>::from_bits(self.to_bits() & ABS_MASK);
-                let sign = -(((self.to_bits() & SIG_MASK) >> (<$b>::BITS - 2)) as i128)
-                    .wrapping_sub(1); // if self >= 0. { 1 } else { -1 }
-                if abs >= 1.0 {
-                    let bits = abs.to_bits();
-                    let exponent = ((bits >> M) & EXP_MASK) - EXP_OFFSET;
-                    let mantissa = (bits & MAN_MASK) | MAN_ONE;
-                    if exponent <= M {
-                        (I256::from(mantissa >> (M - exponent))) * sign
-                    } else if exponent < 255 {
-                        (I256::from(mantissa) << (exponent - M)) * sign
-                    } else if sign > 0 {
-                        I256::MAX
-                    } else {
-                        I256::MIN
-                    }
-                } else {
-                    I256::ZERO
-                }
-            }
-        }
-    )*};
-}
-
-impl_as_i256_float! {
-    f32[u32], f64[u64],
-}
-
 macro_rules! impl_try_into {
     ($($t:ty),* $(,)?) => {$(
         impl TryFrom<I256> for $t {
@@ -181,19 +133,4 @@ impl_try_into! {
     i8, i16, i32, i64, i128,
     u8, u16, u32, u64, u128,
     isize, usize,
-}
-
-macro_rules! impl_into_float {
-    ($($t:ty => $f:ident),* $(,)?) => {$(
-        impl From<I256> for $t {
-            #[inline]
-            fn from(x: I256) -> $t {
-                x.$f()
-            }
-        }
-    )*};
-}
-
-impl_into_float! {
-    f32 => as_f32, f64 => as_f64,
 }

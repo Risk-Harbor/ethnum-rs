@@ -187,32 +187,4 @@ impl U256 {
         let (_, lo) = self.into_words();
         lo as _
     }
-
-    /// Cast to a primitive `f32`.
-    pub fn as_f32(self) -> f32 {
-        match self.into_words() {
-            (0, lo) => lo as _,
-            _ => f32::INFINITY,
-        }
-    }
-
-    /// Cast to a primitive `f64`.
-    pub fn as_f64(self) -> f64 {
-        // NOTE: Binary representation of 2**128. This is used because `powi` is
-        // neither `const` nor `no_std`.
-        const HI: u64 = 0x47f0000000000000;
-        let (hi, lo) = self.into_words();
-        (hi as f64) * f64::from_bits(HI) + (lo as f64)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::uint::U256;
-
-    #[test]
-    #[allow(clippy::float_cmp)]
-    fn converts_to_f64() {
-        assert_eq!(U256::from_words(1, 0).as_f64(), 2.0f64.powi(128))
-    }
 }

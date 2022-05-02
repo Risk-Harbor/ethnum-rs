@@ -189,26 +189,4 @@ impl I256 {
         let (_, lo) = self.into_words();
         lo as _
     }
-
-    /// Cast to a primitive `f32`.
-    pub fn as_f32(self) -> f32 {
-        self.as_f64() as _
-    }
-
-    /// Cast to a primitive `f64`.
-    pub fn as_f64(self) -> f64 {
-        let sign = self.signum128() as f64;
-        self.unsigned_abs().as_f64() * sign
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::I256;
-
-    #[test]
-    #[allow(clippy::float_cmp)]
-    fn converts_to_f64() {
-        assert_eq!((-I256::from_words(1, 0)).as_f64(), -(2.0f64.powi(128)))
-    }
 }
